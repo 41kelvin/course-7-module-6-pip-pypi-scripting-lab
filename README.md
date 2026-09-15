@@ -1,148 +1,94 @@
+# Python Automation Lab
 
-# Module Lab: Automating Python Projects with Pip, PyPi & Scripting
+Generate daily text logs, fetch a sample API post, and manage tasks from the
+command line. The task commands use a `UserAccount` class and save each user's
+tasks in a JSON file.
 
-## Learning Goals
+## Setup
 
-- Automate Python tasks using command-line scripts.
-- Use pip to install and manage external packages.
-- Write modular Python scripts with clean entry points.
-- Track dependencies using a requirements.txt file.
-- Generate structured outputs using file I/O techniques.
-
-## Introduction
-
-In this lab, you will build a **Python automation tool** that uses pip-installed packages and scriptable logic to automate a real-world task. Your script will:
-
-- Use pip to install third-party packages (e.g., `requests`).
-- Fetch or process external data.
-- Write structured output to a local file.
-- Track all dependencies in `requirements.txt` for reproducibility.
-
-This lab emphasizes automation, scripting practices, and environment management using the standard Python ecosystem.
-
-## Setup Instructions
-
-### Fork and Clone the Repository
-
-1. Go to the provided GitHub repository link.
-2. Fork the repository to your GitHub account.
-3. Clone the forked repository to your local machine using:
+Use Python 3.10 or newer. From the project folder:
 
 ```bash
-git clone <repo-url>
-cd module-lab-pip-pypi-scripting
+python3 -m venv .venv
+source .venv/bin/activate
+python -m pip install -r requirements.txt
 ```
 
-### Install Python and pip
+On Windows, activate with `.venv\Scripts\activate`.
 
-Ensure Python and pip are installed:
+`requirements.txt` was generated with `python -m pip freeze` in an isolated
+virtual environment. It pins requests, pytest, and their installed dependencies.
+The pip commands above are the setup used for this project.
+
+## Generate a log
 
 ```bash
-python --version
-pip --version
+python generate_log.py
+python generate_log.py "User logged in" "Report exported"
+python generate_log.py --fetch-post
 ```
 
-Optionally, create a virtual environment:
+The default command writes three sample entries. Custom entries replace those
+samples. `--fetch-post` fetches a title from JSONPlaceholder using requests and
+includes it in the log. This option requires an internet connection and reports
+an error if the request fails.
 
-```bash
-python -m venv venv
-source venv/bin/activate  # macOS/Linux
-venv\Scripts\activate   # Windows
-```
+Each run writes `log_YYYYMMDD.txt` in the current working directory, using the
+local date, and prints `Log written to log_YYYYMMDD.txt`. Running it again on the
+same date overwrites that day's log.
 
-Install any required dependencies:
-
-```bash
-pip install -r requirements.txt
-```
-
-## Tasks
-
-### Task 1: Define the Problem
-
-Your goal is to create a **Python script** that automates a small task:
-
-- Uses one or more pip-installed packages (e.g., `requests`, `pandas`, `rich`)
-- Outputs data to a `.txt` or `.csv` file using File I/O
-- Logs or prints messages to confirm behavior
-- Is executable from the command line
-- Records dependencies in `requirements.txt`
-
----
-
-### Task 2: Determine the Design
-
-You will implement a script with the following design principles:
-
-- Use `pip` to install packages
-- Import modules inside a Python script
-- Wrap logic in `if __name__ == "__main__"` to support reusability
-- Structure output files with filenames that include timestamps
-- Track dependencies using `pip freeze > requirements.txt`
-
----
-
-### Task 3: Develop and Run Your Script
-
-#### Step 1: Create a script called `generate_log.py`
+The function can also be imported:
 
 ```python
-from datetime import datetime
+from lib.generate_log import generate_log
 
-log_data = ["User logged in", "User updated profile", "Report exported"]
-filename = f"log_{datetime.now().strftime('%Y%m%d')}.txt"
-
-with open(filename, "w") as file:
-    for entry in log_data:
-        file.write(f"{entry}\n")
-
-print(f"Log written to {filename}")
+filename = generate_log(["User logged in", "Report exported"])
 ```
 
-#### Step 2: Add an API integration using `requests`
+`generate_log(data)` requires a list, writes one entry per line, and returns the
+filename. An empty list creates an empty file. Non-list input raises `ValueError`.
+Text entries retain their whitespace and Unicode characters.
 
-```python
-import requests
-
-def fetch_data():
-    response = requests.get("https://jsonplaceholder.typicode.com/posts/1")
-    if response.status_code == 200:
-        return response.json()
-    return {}
-
-if __name__ == "__main__":
-    post = fetch_data()
-    print("Fetched Post Title:", post.get("title", "No title found"))
-```
-
-#### Step 3: Track your dependencies
-
-After installing any packages with `pip install ...`, run:
+## Manage tasks
 
 ```bash
-pip freeze > requirements.txt
+python main.py add-task --user kelvin --title "Finish the lab"
+python main.py complete-task --user kelvin --task-id 1
 ```
 
----
+The add command prints the new task ID. Task IDs start at 1 for each account.
+Tasks are stored in `tasks.json` in the current directory and survive separate
+script runs. Empty usernames and titles, missing task IDs, and already completed
+tasks produce an error message and a nonzero exit code.
 
-## Best Practices
+To choose a different storage file, put `--data-file` before the command:
 
-- Use clear function names (`fetch_data`, `write_log`) for clarity.
-- Always check file write success with print or logging statements.
-- Avoid hardcoding data—use variables and functions where appropriate.
-- Use virtual environments to isolate dependencies.
-- Wrap script logic in `if __name__ == "__main__"` for script reusability.
+```bash
+python main.py --data-file study.json add-task --user kelvin --title "Review notes"
+```
 
----
+Run `python main.py --help` or `python generate_log.py --help` for command help.
+The task file is intended for one local process at a time.
 
-## Conclusion
+## Project files
 
-After completing this lab, you will:
+- `lib/generate_log.py`: log generation and input validation.
+- `lib/api.py`: public API request with a ten-second timeout.
+- `lib/tasks.py`: user accounts and JSON storage.
+- `generate_log.py`: log script arguments.
+- `main.py`: task command arguments.
+- `testing/`: original lab tests and additional automation tests.
 
-✅ Automate tasks with Python scripting  
-✅ Use external packages from PyPi with pip  
-✅ Track project dependencies with `requirements.txt`  
-✅ Generate structured output files from your script  
-✅ Structure projects for portability and collaboration
+Generated logs, the default task file, caches, and the virtual environment are
+excluded from Git.
 
-These scripting and packaging skills are essential for building automation tools and working in modern Python development workflows.
+## Tests
+
+```bash
+python -m pytest
+```
+
+The tests cover log naming, exact contents, invalid input, empty files,
+confirmation messages, API responses and failures, task persistence, account
+separation, and invalid task data. API tests use mock responses and need no
+internet access. GitHub Actions runs the suite on Python 3.10 and 3.12.
